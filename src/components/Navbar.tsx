@@ -1,24 +1,31 @@
 import { Link, useLocation } from "react-router-dom";
-import { Menu, X, Stethoscope } from "lucide-react";
-import { useState } from "react";
+import { Menu, X, Stethoscope, User } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const location = useLocation();
+
+  useEffect(() => {
+    setIsLoggedIn(!!localStorage.getItem("user"));
+  }, [location]);
 
   const links = [
     { to: "/", label: "Home" },
-    { to: "/detection", label: "Detection" },
-    { to: "/profile", label: "Profile" },
   ];
+  if (isLoggedIn) {
+    links.push({ to: "/detection", label: "Detection" });
+    links.push({ to: "/profile", label: "Profile" });
+  }
 
   return (
     <nav className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-lg">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link to="/" className="flex items-center gap-2 font-display text-xl font-bold text-primary">
           <Stethoscope className="h-7 w-7" />
-          VetAI Detect
+          Live Stock Detection
         </Link>
 
         {/* Desktop */}
@@ -37,12 +44,22 @@ const Navbar = () => {
             </Link>
           ))}
           <div className="ml-3 flex gap-2">
-            <Button variant="ghost" asChild>
-              <Link to="/signin">Sign In</Link>
-            </Button>
-            <Button asChild>
-              <Link to="/signup">Sign Up</Link>
-            </Button>
+            {!isLoggedIn ? (
+              <>
+                <Button variant="ghost" asChild>
+                  <Link to="/signin">Sign In</Link>
+                </Button>
+                <Button asChild>
+                  <Link to="/signup">Sign Up</Link>
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" size="icon" asChild className="rounded-full">
+                <Link to="/profile">
+                  <User className="h-5 w-5" />
+                </Link>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -66,12 +83,20 @@ const Navbar = () => {
             </Link>
           ))}
           <div className="mt-3 flex gap-2">
-            <Button variant="ghost" asChild className="flex-1">
-              <Link to="/signin" onClick={() => setOpen(false)}>Sign In</Link>
-            </Button>
-            <Button asChild className="flex-1">
-              <Link to="/signup" onClick={() => setOpen(false)}>Sign Up</Link>
-            </Button>
+            {!isLoggedIn ? (
+              <>
+                <Button variant="ghost" asChild className="flex-1">
+                  <Link to="/signin" onClick={() => setOpen(false)}>Sign In</Link>
+                </Button>
+                <Button asChild className="flex-1">
+                  <Link to="/signup" onClick={() => setOpen(false)}>Sign Up</Link>
+                </Button>
+              </>
+            ) : (
+              <Button asChild className="flex-1">
+                <Link to="/profile" onClick={() => setOpen(false)}>View Profile</Link>
+              </Button>
+            )}
           </div>
         </div>
       )}

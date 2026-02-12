@@ -3,7 +3,16 @@ import { ArrowRight, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import heroBg from "@/assets/hero-bg.jpg";
 
-const HeroSection = () => (
+import { useState, useEffect } from "react";
+
+const HeroSection = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    setIsLoggedIn(!!localStorage.getItem("user"));
+  }, []);
+
+  return (
   <section className="relative overflow-hidden">
     {/* Background */}
     <div className="absolute inset-0">
@@ -23,18 +32,27 @@ const HeroSection = () => (
           Detect diseases early using AI image analysis. Upload a photo of your animal and get instant diagnosis with treatment recommendations.
         </p>
         <div className="flex flex-wrap gap-4">
-          <Button size="lg" variant="secondary" asChild className="font-semibold">
-            <Link to="/signup">
-              Get Started <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
+          {!isLoggedIn ? (
+            <Button size="lg" variant="secondary" asChild className="font-semibold">
+              <Link to="/signup">
+                Get Started <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          ) : (
+            <Button size="lg" variant="secondary" asChild className="font-semibold">
+              <Link to="/detection">
+                Go to Detection <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          )}
           <Button size="lg" variant="outline" asChild className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10">
-            <Link to="/detection">Try Detection</Link>
+            <Link to={isLoggedIn ? "/detection" : "/signin"}>Try Detection</Link>
           </Button>
         </div>
       </div>
     </div>
   </section>
-);
+  );
+};
 
 export default HeroSection;

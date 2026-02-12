@@ -3,7 +3,6 @@ import HeroSection from "@/components/HeroSection";
 import HowItWorks from "@/components/HowItWorks";
 import Advantages from "@/components/Advantages";
 import SupportedAnimals from "@/components/SupportedAnimals";
-import Footer from "@/components/Footer";
 
 const Index = () => (
   <div className="min-h-screen">
@@ -14,7 +13,6 @@ const Index = () => (
       <Advantages />
       <SupportedAnimals />
     </main>
-    <Footer />
   </div>
 );
 

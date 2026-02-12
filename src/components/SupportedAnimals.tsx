@@ -1,13 +1,14 @@
+import { Link } from "react-router-dom";
 import dogImg from "@/assets/dog.jpg";
 import catImg from "@/assets/cat.jpg";
 import chickenImg from "@/assets/chicken.jpg";
 import cowImg from "@/assets/cow.jpg";
 
 const animals = [
-  { name: "Dog", img: dogImg, angle: -45 },
-  { name: "Cat", img: catImg, angle: 45 },
-  { name: "Chicken", img: chickenImg, angle: 135 },
-  { name: "Cow", img: cowImg, angle: 225 },
+  { name: "Dog", img: dogImg, angle: -45, path: "/detection/dog" },
+  { name: "Cat", img: catImg, angle: 45, path: "/detection/cat" },
+  { name: "Chicken", img: chickenImg, angle: 135, path: "/detection/chicken" },
+  { name: "Cow", img: cowImg, angle: 225, path: "/detection/cow" },
 ];
 
 const SupportedAnimals = () => (
@@ -50,8 +51,9 @@ const SupportedAnimals = () => (
             const y = 190 + radius * Math.sin(rad);
 
             return (
-              <div
+              <Link
                 key={a.name}
+                to={a.path}
                 className="group absolute flex flex-col items-center gap-2"
                 style={{
                   left: x,
@@ -70,7 +72,7 @@ const SupportedAnimals = () => (
                 <span className="rounded-full bg-background px-3 py-0.5 text-xs font-bold text-foreground shadow-sm border border-border md:text-sm">
                   {a.name}
                 </span>
-              </div>
+              </Link>
             );
           })}
 

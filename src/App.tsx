@@ -11,6 +11,8 @@ import SignUp from "./pages/SignUp";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
+import ProtectedRoute from "./components/ProtectedRoute";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -21,11 +23,23 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/detection" element={<Detection />} />
-          <Route path="/detection/:animal" element={<DetectionUpload />} />
+          <Route path="/detection" element={
+            <ProtectedRoute>
+              <Detection />
+            </ProtectedRoute>
+          } />
+          <Route path="/detection/:animal" element={
+            <ProtectedRoute>
+              <DetectionUpload />
+            </ProtectedRoute>
+          } />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
-          <Route path="/profile" element={<Profile />} />
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          } />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

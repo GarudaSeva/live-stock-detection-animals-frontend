@@ -9,9 +9,9 @@ import {
   Apple,
   ShieldAlert,
   ArrowLeft,
+  ChevronDown,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import dogImg from "@/assets/dog.jpg";
@@ -88,7 +88,6 @@ const DetectionUpload = () => {
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Detection
           </Button>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -107,14 +106,85 @@ const DetectionUpload = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleDetect = () => {
-    if (!uploadedImage) return;
+  const handleDetect = async () => {
+    if (!uploadedImage || !fileRef.current?.files?.[0]) return;
     setLoading(true);
-    setTimeout(() => {
-      setResult(mockResults[animalKey]);
+
+    const file = fileRef.current.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const animalRouteMap: Record<Animal, string> = {
+      dog: "dogs",
+      cat: "goats",
+      chicken: "poultry",
+      cow: "cattle",
+    };
+
+    const routePrefix = animalRouteMap[animalKey];
+    const backendUrl = `http://127.0.0.1:5000/${routePrefix}/predict`;
+
+    try {
+      const response = await fetch(backendUrl, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to connect to detection service");
+      }
+
+      const data = await response.json();
+
+      if (data.error) {
+        toast({ title: "Detection Error", description: data.error, variant: "destructive" });
+        return;
+      }
+
+      const finalResult = {
+        diseaseName: data.prediction,
+        causes: data.causes || ["Unknown"],
+        precautions: data.precautions || ["No specific precautions found"],
+        foodItems: data.foodItems || ["Standard bird feed"],
+        medications: data.medications || ["Consult your vet"],
+      };
+      
+      setResult(finalResult);
+
+      const userStr = localStorage.getItem("user");
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        await fetch("http://localhost:5000/auth/history", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: user.id,
+            history_item: {
+              id: Date.now().toString(),
+              animal: displayName,
+              disease: data.prediction,
+              date: new Date().toLocaleString(),
+              image: uploadedImage,
+              causes: finalResult.causes,
+              precautions: finalResult.precautions,
+              food: finalResult.foodItems,
+              medications: finalResult.medications
+            }
+          }),
+        });
+      }
+
+      toast({ title: "Detection Complete", description: `Disease detected: ${data.prediction}` });
+    } catch (error) {
+      console.error("Detection error:", error);
+      toast({
+        title: "Error",
+        description: "Could not reach the detection server. Is it running?",
+        variant: "destructive",
+      });
+    } finally {
       setLoading(false);
-      toast({ title: "Detection Complete", description: `Disease detected for ${displayName}` });
-    }, 2500);
+    }
   };
 
   const reset = () => {
@@ -125,7 +195,7 @@ const DetectionUpload = () => {
   return (
     <div className="min-h-screen">
       <Navbar />
-      <main className="container mx-auto px-4 py-12">
+      <main className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8 flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/detection")}>
@@ -148,7 +218,7 @@ const DetectionUpload = () => {
 
         {/* Upload Section */}
         {!result && (
-          <div className="mx-auto max-w-md animate-fade-in">
+          <div className="mx-auto max-w-xl animate-fade-in">
             <div className="rounded-2xl border bg-card p-8 card-shadow">
               <h3 className="mb-4 text-center font-display text-lg font-semibold text-foreground">
                 Upload {displayName} Image
@@ -164,25 +234,26 @@ const DetectionUpload = () => {
                   <span className="text-sm font-medium text-muted-foreground">Click to upload image</span>
                 </button>
               ) : (
-                <div className="space-y-4">
-                  <div className="relative overflow-hidden rounded-xl">
-                    <img src={uploadedImage} alt="Uploaded" className="w-full rounded-xl" />
-                    <button
-                      onClick={() => setUploadedImage(null)}
-                      className="absolute right-2 top-2 rounded-full bg-card/80 p-1 backdrop-blur-sm"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+                <div className="space-y-6">
+                  <div className="flex justify-center">
+                    <div className="relative h-48 w-48 overflow-hidden rounded-full border-4 border-primary/20">
+                      <img src={uploadedImage} alt="Uploaded" className="h-full w-full object-cover" />
+                    </div>
                   </div>
-                  <Button onClick={handleDetect} disabled={loading} className="w-full" size="lg">
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analyzing...
-                      </>
-                    ) : (
-                      "Detect Disease"
-                    )}
-                  </Button>
+                  <div className="flex gap-4">
+                    <Button onClick={handleDetect} disabled={loading} className="flex-1" size="lg">
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Analyzing...
+                        </>
+                      ) : (
+                        "Detect Now"
+                      )}
+                    </Button>
+                    <Button variant="outline" onClick={() => setUploadedImage(null)} className="flex-1">
+                      Change Image
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -191,56 +262,112 @@ const DetectionUpload = () => {
 
         {/* Results */}
         {result && (
-          <div className="mx-auto max-w-2xl animate-fade-in space-y-6">
+          <div className="mx-auto max-w-4xl animate-fade-in space-y-6">
             <div className="rounded-2xl border bg-card p-8 card-shadow">
-              <div className="mb-6 flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full hero-gradient text-primary-foreground">
-                  <AlertCircle className="h-7 w-7" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Detected Disease</p>
-                  <h2 className="font-display text-2xl font-bold text-foreground">{result.diseaseName}</h2>
+              {/* Show analyzed image on top */}
+              <div className="mb-8 flex justify-center">
+                <div className="h-48 w-48 overflow-hidden rounded-full border-4 border-primary/20 shadow-lg">
+                  <img src={uploadedImage || ""} alt="Analyzed" className="h-full w-full object-cover" />
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <ResultCard icon={AlertCircle} title="Causes" items={result.causes} />
-                <ResultCard icon={ShieldAlert} title="Precautions" items={result.precautions} />
-                <ResultCard icon={Apple} title="Recommended Food" items={result.foodItems} />
-                <ResultCard icon={Pill} title="Medications" items={result.medications} />
+              <div className="mb-6 flex items-center justify-center gap-4 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full hero-gradient text-primary-foreground shadow-lg">
+                  <AlertCircle className="h-7 w-7" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-widest text-primary">Detected Disease</p>
+                  <h2 className="font-display text-3xl font-bold text-foreground">{result.diseaseName}</h2>
+                </div>
+              </div>
+
+              <div className="mt-8 space-y-4">
+                <AccordionCard 
+                  icon={AlertCircle} 
+                  title="Likely Causes" 
+                  items={result.causes} 
+                  defaultOpen={true}
+                />
+                <AccordionCard 
+                  icon={ShieldAlert} 
+                  title="Precautions" 
+                  items={result.precautions} 
+                />
+                <AccordionCard 
+                  icon={Apple} 
+                  title="Recommended Food" 
+                  items={result.foodItems} 
+                />
+                <AccordionCard 
+                  icon={Pill} 
+                  title="Medications" 
+                  items={result.medications} 
+                />
               </div>
             </div>
-            <div className="flex justify-center gap-3">
-              <Button variant="outline" onClick={reset} size="lg">
-                Upload Another Image
+            <div className="flex justify-center gap-4">
+              <Button variant="outline" onClick={reset} size="lg" className="flex-1 max-w-xs rounded-full px-8">
+                Upload Another
               </Button>
-              <Button variant="outline" onClick={() => navigate("/detection")} size="lg">
+              <Button variant="outline" onClick={() => navigate("/detection")} size="lg" className="flex-1 max-w-xs rounded-full px-8">
                 Change Animal
               </Button>
             </div>
           </div>
         )}
       </main>
-      <Footer />
     </div>
   );
 };
 
-const ResultCard = ({ icon: Icon, title, items }: { icon: any; title: string; items: string[] }) => (
-  <div className="rounded-xl border bg-background p-5">
-    <div className="mb-3 flex items-center gap-2 text-primary">
-      <Icon className="h-5 w-5" />
-      <h4 className="font-display font-semibold">{title}</h4>
+const AccordionCard = ({ 
+  icon: Icon, 
+  title, 
+  items, 
+  defaultOpen = false 
+}: { 
+  icon: any; 
+  title: string; 
+  items: string[];
+  defaultOpen?: boolean;
+}) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-primary/10 bg-background transition-all duration-300">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex w-full items-center justify-between p-5 text-left transition-colors hover:bg-primary/5"
+      >
+        <div className="flex items-center gap-4">
+          <div className={`flex h-10 w-10 items-center justify-center rounded-full ${isOpen ? 'bg-primary text-white' : 'bg-primary/10 text-primary'} transition-colors duration-300`}>
+            <Icon className="h-5 w-5" />
+          </div>
+          <h4 className="font-display text-lg font-bold text-foreground">
+            {title}
+          </h4>
+        </div>
+        <ChevronDown 
+          className={`h-5 w-5 text-muted-foreground transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} 
+        />
+      </button>
+      
+      <div 
+        className={`transition-all duration-300 ease-in-out ${isOpen ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'} overflow-hidden`}
+      >
+        <div className="border-t bg-muted/30 p-5 pt-4">
+          <ul className="grid gap-3 sm:grid-cols-1">
+            {items.map((item, i) => (
+              <li key={i} className="flex items-start gap-3 text-sm text-foreground/80">
+                <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary/40 shadow-[0_0_8px_rgba(var(--primary-rgb),0.4)]" />
+                <span className="leading-relaxed">{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </div>
-    <ul className="space-y-1.5">
-      {items.map((item, i) => (
-        <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-          <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/60" />
-          {item}
-        </li>
-      ))}
-    </ul>
-  </div>
-);
+  );
+};
 
 export default DetectionUpload;
